@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bird Game</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #4ec0e9;
+    font-family: sans-serif;
+    touch-action: manipulation;
+  }
+  #gameCanvas {
+    display: block;
+    margin: 0 auto;
+  }
+  #ui {
+    position: absolute;
+    top: 120px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    pointer-events: none;
+    z-index: 4;
+    display: none;
+  }
+  #withdrawBtn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: linear-gradient(to bottom, #8fe3a3, #3fb96a);
+    color: #114a26;
+    padding: 8px 14px;
+    border-radius: 14px;
+    box-shadow: 0 4px 0 #2c8c50, 0 6px 10px rgba(0,0,0,0.3);
+    text-align: center;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border: none;
+    z-index: 5;
+  }
+  #coinBadge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: linear-gradient(to bottom, #fff3c4, #ffd166);
+    color: #7a4a00;
+    padding: 8px 14px;
+    border-radius: 14px;
+    box-shadow: 0 4px 0 #c97e0c, 0 6px 10px rgba(0,0,0,0.3);
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    z-index: 5;
+  }
+  #withdrawPanel {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 20;
+    align-items: center;
+    justify-content: center;
+  }
+  #withdrawBox {
+    background: #eafff0;
+    border-radius: 18px;
+    padding: 20px 24px 24px;
+    width: 82%;
+    max-width: 320px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    text-align: center;
+  }
+  #withdrawBox h2 {
+    margin: 0 0 8px;
+    color: #114a26;
+    font-size: 20px;
+  }
+  #withdrawBalanceLine {
+    color: #2c8c50;
+    font-size: 17px;
+    font-weight: bold;
+    margin-bottom: 16px;
+  }
+  .wdField {
+    text-align: left;
+    margin-bottom: 14px;
+  }
+  .wdField label {
+    display: block;
+    font-size: 13px;
+    color: #114a26;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  .wdField input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 2px solid #bfe6cc;
+    border-radius: 10px;
+    font-size: 15px;
+    background: white;
+    color: #114a26;
+  }
+  .wdField input:focus {
+    outline: none;
+    border-color: #3fb96a;
+  }
+  .wdHint {
+    font-size: 11px;
+    color: #6a8a75;
+    margin-top: 4px;
+  }
+  #paymentMethods {
+    display: flex;
+    gap: 10px;
+  }
+  .payBtn {
+    flex: 1;
+    padding: 10px 0;
+    border: 2px solid #bfe6cc;
+    border-radius: 10px;
+    background: white;
+    color: #114a26;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .payBtn.selected {
+    background: linear-gradient(to bottom, #8fe3a3, #3fb96a);
+    border-color: #2c8c50;
+    color: #0c3018;
+  }
+  #withdrawStatus {
+    font-size: 13px;
+    color: #4a6a55;
+    margin-bottom: 14px;
+    min-height: 18px;
+  }
+  #confirmWithdraw {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(to bottom, #8fe3a3, #3fb96a);
+    color: #114a26;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #2c8c50;
+    margin-bottom: 10px;
+  }
+  #confirmWithdraw:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  #closeWithdraw {
+    display: block;
+    margin: 0 auto;
+    padding: 10px 30px;
+    border: none;
+    border-radius: 50px;
+    background: #d8e8dd;
+    color: #114a26;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  #overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.25);
+  }
+  #message {
+    text-align: center;
+    color: white;
+    font-size: 24px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+    margin-bottom: 24px;
+    white-space: pre-line;
+  }
+  #playBtn {
+    font-size: 26px;
+    font-weight: bold;
+    padding: 14px 46px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(to bottom, #ffd166, #f4a127);
+    color: #7a4a00;
+    box-shadow: 0 5px 0 #c97e0c, 0 8px 12px rgba(0,0,0,0.3);
+    cursor: pointer;
+    letter-spacing: 1px;
+    margin-top: 110px;
+    display: block;
+  }
+  #playBtn:active {
+    box-shadow: 0 2px 0 #c97e0c, 0 4px 8px rgba(0,0,0,0.3);
+    transform: translateY(3px);
+  }
+  #homeBtn {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px 38px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(to bottom, #cfd8dc, #90a4ae);
+    color: #263238;
+    box-shadow: 0 4px 0 #607d8b, 0 6px 10px rgba(0,0,0,0.3);
+    cursor: pointer;
+    letter-spacing: 1px;
+    margin-top: 14px;
+    display: none;
+  }
+  #homeBtn:active {
+    box-shadow: 0 2px 0 #607d8b, 0 4px 8px rgba(0,0,0,0.3);
+    transform: translateY(3px);
+  }
+</style>
+</head>
+<body>
+<div id="ui">Score: <span id="score">0</span></div>
+<div id="coinBadge">🪙 <span id="coinBalance">0</span></div>
+<button id="withdrawBtn">💸 WITHDRAW</button>
+<div id="withdrawPanel">
+  <div id="withdrawBox">
+    <h2>💸 Withdraw Coins</h2>
+    <div id="withdrawBalanceLine">Balance: <span id="withdrawBalanceValue">0</span> 🪙</div>
+
+    <div class="wdField">
+      <label for="withdrawAmount">Withdraw Amount</label>
+      <input type="number" id="withdrawAmount" min="20000" placeholder="Enter amount">
+      <div class="wdHint">Minimum withdraw: 20000 🪙</div>
+    </div>
+
+    <div class="wdField">
+      <label>Payment Method</label>
+      <div id="paymentMethods">
+        <button type="button" class="payBtn" data-method="KPay">KPay</button>
+        <button type="button" class="payBtn" data-method="Wave">Wave Money</button>
+      </div>
+    </div>
+
+    <div class="wdField">
+      <label for="withdrawPhone">Phone Number</label>
+      <input type="tel" id="withdrawPhone" placeholder="09xxxxxxxxx">
+    </div>
+
+    <div id="withdrawStatus"></div>
+    <button id="confirmWithdraw">Submit Withdrawal</button>
+    <button id="closeWithdraw">Close</button>
+  </div>
+</div>
+<canvas id="gameCanvas"></canvas>
+<div id="overlay">
+  <div id="message"></div>
+  <button id="playBtn">PLAY</button>
+  <button id="homeBtn">HOME</button>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const uiEl = document.getElementById('ui');
+const overlayEl = document.getElementById('overlay');
+const messageEl = document.getElementById('message');
+const playBtn = document.getElementById('playBtn');
+const homeBtn = document.getElementById('homeBtn');
+const coinBalanceEl = document.getElementById('coinBalance');
+const withdrawBtn = document.getElementById('withdrawBtn');
+const withdrawPanel = document.getElementById('withdrawPanel');
+const withdrawBalanceValueEl = document.getElementById('withdrawBalanceValue');
+const confirmWithdrawBtn = document.getElementById('confirmWithdraw');
+const closeWithdrawBtn = document.getElementById('closeWithdraw');
+const withdrawStatusEl = document.getElementById('withdrawStatus');
+
+// ----- Telegram Mini App integration -----
+let tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+let currentPlayerName = 'Player';
+
+if (tg) {
+  tg.ready();
+  tg.expand();
+  const tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user;
+  if (tgUser) {
+    // Prefer @username, fall back to first + last name
+    if (tgUser.username) {
+      currentPlayerName = '@' + tgUser.username;
+    } else {
+      currentPlayerName = (tgUser.first_name || '') + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+      currentPlayerName = currentPlayerName.trim() || 'Player';
+    }
+  }
+} else {
+  // Not running inside Telegram (e.g. testing in a normal browser)
+  try {
+    currentPlayerName = localStorage.getItem('birdGamePlayerName') || 'Player';
+  } catch (e) {}
+}
+
+// ----- Adsgram ad integration -----
+// Replace "YOUR-BLOCK-ID" with the Block ID from your Adsgram publisher
+// account (https://partner.adsgram.ai). Interstitial ads will show each
+// time the Play button is pressed.
+const ADSGRAM_BLOCK_ID = 'int-44218';
+const AdController = window.Adsgram
+  ? window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID })
+  : null;
+
+function playWithAd(startCallback) {
+  if (AdController) {
+    AdController.show()
+      .then(() => {
+        // ad watched (or closed) — start the game either way
+        startCallback();
+      })
+      .catch(() => {
+        // no ad available / error — don't block the player, just start
+        startCallback();
+      });
+  } else {
+    // Adsgram SDK not loaded (e.g. testing outside Telegram) — skip ad
+    startCallback();
+  }
+}
+
+function resize() {
+  canvas.width = Math.min(window.innerWidth, 480);
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+let bird, pipes, score, gravity, flapPower, gameState, frame, best;
+let pipeSpeed, pipeInterval, pipeTimer, clouds, hills;
+let coins; // 🪙 collectible coins currently on screen
+
+// Load saved best score
+try {
+  best = parseInt(localStorage.getItem('birdGameBest'), 10) || 0;
+} catch (e) {
+  best = 0;
+}
+
+function saveBest() {
+  try {
+    localStorage.setItem('birdGameBest', best);
+  } catch (e) {}
+}
+
+// ----- Coin balance -----
+let coinBalance;
+try {
+  coinBalance = parseInt(localStorage.getItem('birdGameCoinBalance'), 10) || 0;
+} catch (e) {
+  coinBalance = 0;
+}
+
+function updateCoinDisplays() {
+  withdrawBalanceValueEl.textContent = coinBalance;
+  coinBalanceEl.textContent = coinBalance;
+}
+updateCoinDisplays();
+
+function addCoins(amount) {
+  coinBalance += amount;
+  try {
+    localStorage.setItem('birdGameCoinBalance', coinBalance);
+  } catch (e) {}
+  updateCoinDisplays();
+}
+
+let runCoins = 0; // coins collected in the current run (shown in the Game Over message only)
+
+withdrawBtn.addEventListener('click', () => {
+  withdrawStatusEl.textContent = '';
+  withdrawStatusEl.style.color = '';
+  updateCoinDisplays();
+  document.getElementById('withdrawAmount').value = '';
+  document.getElementById('withdrawPhone').value = '';
+  selectedPaymentMethod = null;
+  document.querySelectorAll('.payBtn').forEach(b => b.classList.remove('selected'));
+  confirmWithdrawBtn.disabled = false;
+  withdrawPanel.style.display = 'flex';
+});
+
+closeWithdrawBtn.addEventListener('click', () => {
+  withdrawPanel.style.display = 'none';
+});
+
+let selectedPaymentMethod = null;
+document.querySelectorAll('.payBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedPaymentMethod = btn.dataset.method;
+    document.querySelectorAll('.payBtn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+confirmWithdrawBtn.addEventListener('click', () => {
+  const amountInput = document.getElementById('withdrawAmount');
+  const phoneInput = document.getElementById('withdrawPhone');
+  const amount = parseInt(amountInput.value, 10);
+
+  withdrawStatusEl.style.color = '#c0392b';
+
+  if (coinBalance <= 0) {
+    withdrawStatusEl.textContent = 'You have no coins to withdraw.';
+    return;
+  }
+  if (!amount || amount <= 0) {
+    withdrawStatusEl.textContent = 'Please enter a valid amount.';
+    return;
+  }
+  if (amount < 20000) {
+    withdrawStatusEl.textContent = 'Minimum withdraw amount is 20000 🪙.';
+    return;
+  }
+  if (amount > coinBalance) {
+    withdrawStatusEl.textContent = 'Amount exceeds your balance.';
+    return;
+  }
+  if (!selectedPaymentMethod) {
+    withdrawStatusEl.textContent = 'Please choose KPay or Wave.';
+    return;
+  }
+  if (!phoneInput.value.trim()) {
+    withdrawStatusEl.textContent = 'Please enter your phone number.';
+    return;
+  }
+
+  coinBalance -= amount;
+  try {
+    localStorage.setItem('birdGameCoinBalance', coinBalance);
+  } catch (e) {}
+  updateCoinDisplays();
+
+  withdrawStatusEl.style.color = '#2c8c50';
+  withdrawStatusEl.textContent = 'Withdrawal of ' + amount + ' 🪙 via ' + selectedPaymentMethod +
+    ' to ' + phoneInput.value.trim() + ' submitted!';
+  amountInput.value = '';
+  phoneInput.value = '';
+  selectedPaymentMethod = null;
+  document.querySelectorAll('.payBtn').forEach(b => b.classList.remove('selected'));
+});
+
+function makeScenery() {
+  clouds = [];
+  for (let i = 0; i < 5; i++) {
+    clouds.push({
+      x: Math.random() * canvas.width,
+      y: 40 + Math.random() * (canvas.height * 0.4),
+      s: 0.6 + Math.random() * 0.8,
+      speed: 0.2 + Math.random() * 0.3
+    });
+  }
+  hills = [];
+  for (let i = 0; i < 6; i++) {
+    hills.push({
+      x: i * 160,
+      h: 40 + Math.random() * 50
+    });
+  }
+}
+
+function reset() {
+  bird = {
+    x: canvas.width * 0.3,
+    y: canvas.height / 2,
+    r: 16,
+    vy: 0
+  };
+  pipes = [];
+  coins = [];
+  score = 0;
+  runCoins = 0;
+  gravity = 0.16;        // slower falling
+  flapPower = -5.2;
+  pipeSpeed = 1.15;      // slower start speed
+  pipeInterval = 165;    // more space between pipes
+  pipeTimer = 60;        // spawn the first pipe soon after start
+  frame = 0;
+  gameState = 'ready'; // ready, playing, over
+  scoreEl.textContent = score;
+  makeScenery();
+  messageEl.textContent = '';
+  playBtn.textContent = 'PLAY';
+  homeBtn.style.display = 'none';
+  updateCoinDisplays();
+  overlayEl.style.display = 'flex';
+  uiEl.style.display = 'none';
+}
+
+function startGame() {
+  gameState = 'playing';
+  overlayEl.style.display = 'none';
+  uiEl.style.display = 'block';
+}
+
+function flap() {
+  if (gameState === 'playing') {
+    bird.vy = flapPower;
+  }
+}
+
+playBtn.addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (gameState === 'ready' || gameState === 'over') {
+    playBtn.disabled = true;
+    playWithAd(() => {
+      playBtn.disabled = false;
+      reset();
+      startGame();
+    });
+  }
+});
+
+homeBtn.addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (gameState === 'over') {
+    reset(); // go back to the home / start screen without starting a new run
+  }
+});
+
+canvas.addEventListener('mousedown', flap);
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  flap();
+}, { passive: false });
+window.addEventListener('keydown', function(e) {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (gameState === 'playing') flap();
+    else if (gameState === 'ready' || gameState === 'over') {
+      reset();
+      startGame();
+    }
+  }
+});
+
+const pipeWidth = 64;
+const pipeGap = 235;
+
+function spawnPipe() {
+  const minTop = 50;
+  const maxTop = canvas.height - pipeGap - 120;
+  const topH = Math.random() * (maxTop - minTop) + minTop;
+  pipes.push({
+    x: canvas.width,
+    top: topH,
+    bottom: topH + pipeGap,
+    passed: false
+  });
+
+  // Every pipe gets a coin floating in the gap between them
+  coins.push({
+    x: canvas.width + pipeWidth / 2,
+    y: topH + pipeGap / 2 + (Math.random() * 40 - 20),
+    r: 11,
+    collected: false
+  });
+}
+
+function update() {
+  if (gameState !== 'playing') {
+    clouds.forEach(c => {
+      c.x -= c.speed;
+      if (c.x < -60) c.x = canvas.width + 60;
+    });
+    return;
+  }
+
+  bird.vy += gravity;
+  bird.y += bird.vy;
+
+  frame++;
+
+  // Keeps getting harder the longer you play, no limit
+  pipeSpeed = 1.3 + score * 0.035;
+  pipeInterval = Math.max(160 - score * 0.9, 85);
+
+  pipeTimer--;
+  if (pipeTimer <= 0) {
+    spawnPipe();
+    pipeTimer = pipeInterval;
+  }
+
+  clouds.forEach(c => {
+    c.x -= c.speed;
+    if (c.x < -60) c.x = canvas.width + 60;
+  });
+
+  for (let i = pipes.length - 1; i >= 0; i--) {
+    const p = pipes[i];
+    p.x -= pipeSpeed;
+
+    if (!p.passed && p.x + pipeWidth < bird.x) {
+      p.passed = true;
+      score++;
+      scoreEl.textContent = score;
+    }
+
+    if (p.x + pipeWidth < 0) {
+      pipes.splice(i, 1);
+    }
+
+    // collision
+    if (
+      bird.x + bird.r > p.x &&
+      bird.x - bird.r < p.x + pipeWidth &&
+      (bird.y - bird.r < p.top || bird.y + bird.r > p.bottom)
+    ) {
+      endGame();
+    }
+  }
+
+  // move & collect coins
+  for (let i = coins.length - 1; i >= 0; i--) {
+    const c = coins[i];
+    c.x -= pipeSpeed;
+
+    if (c.x < -20) {
+      coins.splice(i, 1);
+      continue;
+    }
+
+    const dx = bird.x - c.x;
+    const dy = bird.y - c.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < bird.r + c.r) {
+      coins.splice(i, 1);
+      runCoins++;
+      addCoins(1);
+    }
+  }
+
+  if (bird.y + bird.r > canvas.height - 40 || bird.y - bird.r < 0) {
+    endGame();
+  }
+}
+
+function endGame() {
+  if (gameState !== 'playing') return;
+  gameState = 'over';
+  if (score > best) {
+    best = score;
+    saveBest();
+  }
+  messageEl.textContent = 'Game Over!\nScore: ' + score + '  (Best: ' + best + ')\nCoins collected: ' + runCoins + ' 🪙';
+  playBtn.textContent = 'PLAY AGAIN';
+  homeBtn.style.display = 'block';
+  overlayEl.style.display = 'flex';
+  uiEl.style.display = 'none';
+}
+
+function drawBackground() {
+  // sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  sky.addColorStop(0, '#7fd7f0');
+  sky.addColorStop(0.6, '#bdeaf5');
+  sky.addColorStop(1, '#eafaf0');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // sun
+  ctx.fillStyle = 'rgba(255, 244, 180, 0.9)';
+  ctx.beginPath();
+  ctx.arc(canvas.width - 60, 70, 34, 0, Math.PI * 2);
+  ctx.fill();
+
+  // clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  clouds.forEach(c => {
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(c.s, c.s);
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.arc(18, -8, 14, 0, Math.PI * 2);
+    ctx.arc(-16, -6, 12, 0, Math.PI * 2);
+    ctx.arc(6, 6, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // distant hills
+  ctx.fillStyle = '#9cd7a0';
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height - 40);
+  hills.forEach(h => {
+    ctx.lineTo(h.x + 80, canvas.height - 40 - h.h);
+  });
+  ctx.lineTo(canvas.width, canvas.height - 40);
+  ctx.closePath();
+  ctx.fill();
+
+  // ground
+  ctx.fillStyle = '#ded895';
+  ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+  ctx.fillStyle = '#8bc34a';
+  ctx.fillRect(0, canvas.height - 44, canvas.width, 6);
+}
+
+function drawBird() {
+  ctx.save();
+  ctx.translate(bird.x, bird.y);
+  const angle = Math.max(-0.5, Math.min(0.9, bird.vy / 12));
+  ctx.rotate(angle);
+
+  const r = bird.r;
+  const wingFlap = Math.sin(frame * 0.35);
+
+  // little tail feathers, behind the body
+  ctx.fillStyle = '#e85d04';
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.75, -r * 0.35);
+  ctx.lineTo(-r * 1.5, -r * 0.55 + wingFlap * 2);
+  ctx.lineTo(-r * 1.45, r * 0.05);
+  ctx.lineTo(-r * 0.7, r * 0.25);
+  ctx.closePath();
+  ctx.fill();
+
+  // body with a soft gradient (light top, warm gold bottom)
+  const bodyGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.4, r * 0.2, 0, 0, r * 1.3);
+  bodyGrad.addColorStop(0, '#ffe27a');
+  bodyGrad.addColorStop(0.55, '#ffc93c');
+  bodyGrad.addColorStop(1, '#f4a127');
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r, r * 0.82, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(122, 74, 0, 0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // cream-colored belly patch
+  ctx.fillStyle = '#fff6dd';
+  ctx.beginPath();
+  ctx.ellipse(r * 0.15, r * 0.35, r * 0.55, r * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // wing, flapping smoothly
+  ctx.save();
+  ctx.translate(-r * 0.15, r * 0.05);
+  ctx.rotate(wingFlap * 0.5);
+  const wingGrad = ctx.createLinearGradient(0, -r * 0.4, 0, r * 0.4);
+  wingGrad.addColorStop(0, '#ff9f45');
+  wingGrad.addColorStop(1, '#e85d04');
+  ctx.fillStyle = wingGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.62, r * 0.38, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(122, 40, 0, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+
+  // rosy cheek
+  ctx.fillStyle = 'rgba(255, 120, 120, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(r * 0.05, r * 0.1, r * 0.22, r * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // eye (white + shiny highlight + black pupil)
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.arc(r * 0.4, -r * 0.28, r * 0.28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2b2b2b';
+  ctx.beginPath();
+  ctx.arc(r * 0.48, -r * 0.28, r * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.arc(r * 0.53, -r * 0.34, r * 0.05, 0, Math.PI * 2);
+  ctx.fill();
+
+  // beak, two-tone with a smile line
+  ctx.fillStyle = '#ff9505';
+  ctx.beginPath();
+  ctx.moveTo(r - 2, -r * 0.15);
+  ctx.lineTo(r + r * 0.75, r * 0.03);
+  ctx.lineTo(r - 2, r * 0.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#c96700';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(r - 4, r * 0.02);
+  ctx.lineTo(r + r * 0.55, r * 0.05);
+  ctx.strokeStyle = 'rgba(150, 80, 0, 0.4)';
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawPipes() {
+  pipes.forEach(p => {
+    ctx.fillStyle = '#4caf50';
+    ctx.fillRect(p.x, 0, pipeWidth, p.top);
+    ctx.fillRect(p.x, p.bottom, pipeWidth, canvas.height - 40 - p.bottom);
+
+    ctx.fillStyle = '#388e3c';
+    ctx.fillRect(p.x - 3, p.top - 20, pipeWidth + 6, 20);
+    ctx.fillRect(p.x - 3, p.bottom, pipeWidth + 6, 20);
+  });
+}
+
+function drawCoins() {
+  coins.forEach(c => {
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    const wobble = Math.sin(frame * 0.15 + c.x * 0.05) * 0.15;
+    ctx.scale(1 + wobble, 1);
+
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(0, 0, c.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#e0a800';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff3c4';
+    ctx.font = 'bold ' + (c.r * 1.1) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', 0, 1);
+
+    ctx.restore();
+  });
+}
+
+function draw() {
+  drawBackground();
+  drawPipes();
+  drawCoins();
+  drawBird();
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+reset();
+loop();
+
+</script>
+</body>
+</html>
