@@ -320,15 +320,6 @@ if (tg) {
   } catch (e) {}
 }
 
-// ----- Adsgram ad integration -----
-// Replace "YOUR-BLOCK-ID" with the Block ID from your Adsgram publisher
-// account (https://partner.adsgram.ai). Interstitial ads will show each
-// time the Play button is pressed.
-const ADSGRAM_BLOCK_ID = 'int-44218';
-const AdController = window.Adsgram
-  ? window.Adsgram.init({ blockId: ADSGRAM_BLOCK_ID })
-  : null;
-
 function playWithAd(startCallback) {
   if (AdController) {
     AdController.show()
