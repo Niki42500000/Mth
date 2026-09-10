@@ -1,867 +1,1297 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Bird Game</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-<style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #4ec0e9;
-    font-family: sans-serif;
-    touch-action: manipulation;
-  }
-  #gameCanvas {
-    display: block;
-    margin: 0 auto;
-  }
-  #ui {
-    position: absolute;
-    top: 120px;
-    left: 0;
-    right: 0;
-    text-align: center;
-    color: white;
-    font-size: 28px;
-    font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    pointer-events: none;
-    z-index: 4;
-    display: none;
-  }
-  #withdrawBtn {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    background: linear-gradient(to bottom, #8fe3a3, #3fb96a);
-    color: #114a26;
-    padding: 8px 14px;
-    border-radius: 14px;
-    box-shadow: 0 4px 0 #2c8c50, 0 6px 10px rgba(0,0,0,0.3);
-    text-align: center;
-    font-weight: bold;
-    font-size: 13px;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border: none;
-    z-index: 5;
-  }
-  #coinBadge {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    background: linear-gradient(to bottom, #fff3c4, #ffd166);
-    color: #7a4a00;
-    padding: 8px 14px;
-    border-radius: 14px;
-    box-shadow: 0 4px 0 #c97e0c, 0 6px 10px rgba(0,0,0,0.3);
-    text-align: center;
-    font-weight: bold;
-    font-size: 16px;
-    z-index: 5;
-  }
-  #withdrawPanel {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.55);
-    z-index: 20;
-    align-items: center;
-    justify-content: center;
-  }
-  #withdrawBox {
-    background: #eafff0;
-    border-radius: 18px;
-    padding: 20px 24px 24px;
-    width: 82%;
-    max-width: 320px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    text-align: center;
-  }
-  #withdrawBox h2 {
-    margin: 0 0 8px;
-    color: #114a26;
-    font-size: 20px;
-  }
-  #withdrawBalanceLine {
-    color: #2c8c50;
-    font-size: 17px;
-    font-weight: bold;
-    margin-bottom: 16px;
-  }
-  .wdField {
-    text-align: left;
-    margin-bottom: 14px;
-  }
-  .wdField label {
-    display: block;
-    font-size: 13px;
-    color: #114a26;
-    font-weight: bold;
-    margin-bottom: 6px;
-  }
-  .wdField input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 12px;
-    border: 2px solid #bfe6cc;
-    border-radius: 10px;
-    font-size: 15px;
-    background: white;
-    color: #114a26;
-  }
-  .wdField input:focus {
-    outline: none;
-    border-color: #3fb96a;
-  }
-  .wdHint {
-    font-size: 11px;
-    color: #6a8a75;
-    margin-top: 4px;
-  }
-  #paymentMethods {
-    display: flex;
-    gap: 10px;
-  }
-  .payBtn {
-    flex: 1;
-    padding: 10px 0;
-    border: 2px solid #bfe6cc;
-    border-radius: 10px;
-    background: white;
-    color: #114a26;
-    font-weight: bold;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .payBtn.selected {
-    background: linear-gradient(to bottom, #8fe3a3, #3fb96a);
-    border-color: #2c8c50;
-    color: #0c3018;
-  }
-  #withdrawStatus {
-    font-size: 13px;
-    color: #4a6a55;
-    margin-bottom: 14px;
-    min-height: 18px;
-  }
-  #confirmWithdraw {
-    display: block;
-    width: 100%;
-    padding: 10px 0;
-    border: none;
-    border-radius: 50px;
-    background: linear-gradient(to bottom, #8fe3a3, #3fb96a);
-    color: #114a26;
-    font-weight: bold;
-    font-size: 16px;
-    cursor: pointer;
-    box-shadow: 0 4px 0 #2c8c50;
-    margin-bottom: 10px;
-  }
-  #confirmWithdraw:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-  #closeWithdraw {
-    display: block;
-    margin: 0 auto;
-    padding: 10px 30px;
-    border: none;
-    border-radius: 50px;
-    background: #d8e8dd;
-    color: #114a26;
-    font-weight: bold;
-    font-size: 15px;
-    cursor: pointer;
-  }
-  #overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.25);
-  }
-  #message {
-    text-align: center;
-    color: white;
-    font-size: 24px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
-    margin-bottom: 24px;
-    white-space: pre-line;
-  }
-  #playBtn {
-    font-size: 26px;
-    font-weight: bold;
-    padding: 14px 46px;
-    border: none;
-    border-radius: 50px;
-    background: linear-gradient(to bottom, #ffd166, #f4a127);
-    color: #7a4a00;
-    box-shadow: 0 5px 0 #c97e0c, 0 8px 12px rgba(0,0,0,0.3);
-    cursor: pointer;
-    letter-spacing: 1px;
-    margin-top: 110px;
-    display: block;
-  }
-  #playBtn:active {
-    box-shadow: 0 2px 0 #c97e0c, 0 4px 8px rgba(0,0,0,0.3);
-    transform: translateY(3px);
-  }
-  #homeBtn {
-    font-size: 18px;
-    font-weight: bold;
-    padding: 10px 38px;
-    border: none;
-    border-radius: 50px;
-    background: linear-gradient(to bottom, #cfd8dc, #90a4ae);
-    color: #263238;
-    box-shadow: 0 4px 0 #607d8b, 0 6px 10px rgba(0,0,0,0.3);
-    cursor: pointer;
-    letter-spacing: 1px;
-    margin-top: 14px;
-    display: none;
-  }
-  #homeBtn:active {
-    box-shadow: 0 2px 0 #607d8b, 0 4px 8px rgba(0,0,0,0.3);
-    transform: translateY(3px);
-  }
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Stones Mining</title>  
+<style>  
+  * { box-sizing: border-box; }  
+  :root {  
+    --cave-dark: #0a1428;  
+    --cave-mid: #16213e;  
+    --gold: #ffb800;  
+    --gold-light: #ffd166;  
+    --wood: #6b4423;  
+    --wood-dark: #4a2f1a;  
+    --wood-light: #8b5a2b;  
+    --teal: #06d6a0;  
+  }  
+  body {  
+    margin: 0;  
+    min-height: 100vh;  
+    font-family: "Padauk", "Myanmar Text", "Trebuchet MS", sans-serif;  
+    color: #fff;  
+    background:  
+      radial-gradient(circle at 20% 10%, rgba(60,90,160,0.25), transparent 40%),  
+      radial-gradient(circle at 85% 80%, rgba(255,184,0,0.08), transparent 45%),  
+      linear-gradient(180deg, var(--cave-dark) 0%, #0d1a30 50%, #1a1030 100%);  
+    overflow-x: hidden;  
+  }  
+  /* ============ LOADING SCREEN ============ */  
+  #loadingScreen {  
+    position: fixed;  
+    inset: 0;  
+    display: flex;  
+    flex-direction: column;  
+    align-items: center;  
+    justify-content: center;  
+    background:  
+      radial-gradient(circle at 50% 20%, rgba(90,120,200,0.25), transparent 55%),  
+      linear-gradient(180deg, #0a1428 0%, #101c38 45%, #1c1230 100%);  
+    z-index: 1000;  
+    padding: 30px 20px;  
+    text-align: center;  
+  }  
+  .beam {  
+    position: absolute;  
+    top: 0;  
+    width: 26px;  
+    height: 140px;  
+    background: linear-gradient(180deg, var(--wood-light), var(--wood-dark));  
+    border: 2px solid #2e1c0d;  
+    border-radius: 3px;  
+  }  
+  .beam.left { left: 12px; transform: rotate(-4deg); }  
+  .beam.right { right: 12px; transform: rotate(4deg); }  
+  .lantern {  
+    font-size: 34px;  
+    filter: drop-shadow(0 0 12px #ffb800aa);  
+    animation: flicker 1.8s infinite ease-in-out;  
+    margin-bottom: 6px;  
+  }  
+  @keyframes flicker {  
+    0%, 100% { opacity: 1; }  
+    50% { opacity: 0.7; }  
+  }  
+  .logo-wrap {  
+    position: relative;  
+    margin-top: 10px;  
+  }  
+  .logo-title {  
+    font-size: 54px;  
+    font-weight: 900;  
+    letter-spacing: 3px;  
+    line-height: 0.95;  
+    background: linear-gradient(180deg, #f2f2f2, #b9b9b9);  
+    -webkit-background-clip: text;  
+    background-clip: text;  
+    color: transparent;  
+    text-shadow: none;  
+    -webkit-text-stroke: 2px #3a2a12;  
+    filter: drop-shadow(0 4px 0 #3a2a12);  
+  }  
+  .logo-sub {  
+    font-size: 40px;  
+    font-weight: 900;  
+    letter-spacing: 4px;  
+    color: var(--gold);  
+    -webkit-text-stroke: 2px #5c3a00;  
+    filter: drop-shadow(0 4px 0 #5c3a00);  
+    margin-top: -8px;  
+  }  
+  .pickaxe-deco {  
+    font-size: 44px;  
+    transform: rotate(20deg);  
+    display: inline-block;  
+    margin-bottom: -10px;  
+    filter: drop-shadow(0 0 8px #fff8);  
+  }  
+  .miner-char {  
+    font-size: 100px;  
+    margin: 18px 0 10px;  
+    animation: bob 1s infinite ease-in-out;  
+    filter: drop-shadow(0 8px 10px rgba(0,0,0,0.5));  
+  }  
+  @keyframes bob {  
+    0%, 100% { transform: translateY(0) rotate(0deg); }  
+    50% { transform: translateY(-6px) rotate(-3deg); }  
+  }  
+  .load-bar-outer {  
+    width: 85%;  
+    max-width: 340px;  
+    height: 30px;  
+    background: #1a1108;  
+    border: 3px solid var(--gold);  
+    border-radius: 20px;  
+    overflow: hidden;  
+    margin-top: 14px;  
+    box-shadow: 0 0 14px rgba(255,184,0,0.4);  
+  }  
+  .load-bar-inner {  
+    height: 100%;  
+    width: 0%;  
+    border-radius: 20px;  
+    background: repeating-linear-gradient(  
+      45deg,  
+      var(--gold-light) 0px, var(--gold-light) 14px,  
+      var(--gold) 14px, var(--gold) 28px  
+    );  
+    background-size: 200% 100%;  
+    animation: barMove 0.6s linear infinite;  
+    transition: width 0.15s linear;  
+  }  
+  @keyframes barMove {  
+    0% { background-position: 0 0; }  
+    100% { background-position: 40px 0; }  
+  }  
+  .load-text {  
+    margin-top: 12px;  
+    font-size: 18px;  
+    font-weight: bold;  
+    color: var(--gold-light);  
+    letter-spacing: 1px;  
+  }  
+  .load-pct {  
+    color: #fff;  
+  }  
+  /* ============ MAIN APP ============ */  
+  #app {  
+    display: none;  
+    min-height: 100vh;  
+    padding: 20px;  
+    padding-bottom: 95px;  
+    display: flex;  
+    flex-direction: column;  
+    align-items: center;  
+  }  
+  .page-title {  
+    font-size: 26px;  
+    font-weight: 900;  
+    letter-spacing: 1px;  
+    margin: 6px 0 16px;  
+    color: var(--gold-light);  
+    text-shadow: 0 3px 0 #3a2a12;  
+  }  
+  .balance-box {  
+    position: fixed;  
+    top: 16px;  
+    right: 16px;  
+    background: linear-gradient(160deg, #2a1c0e, #1a1108);  
+    border: 2px solid var(--gold);  
+    border-radius: 12px;  
+    padding: 10px 16px;  
+    font-size: 14px;  
+    text-align: right;  
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);  
+    z-index: 5;  
+  }  
+  .stats {  
+    background: linear-gradient(160deg, rgba(30,40,70,0.7), rgba(15,20,40,0.7));  
+    border: 1px solid rgba(255,184,0,0.3);  
+    border-radius: 14px;  
+    padding: 14px 25px;  
+    margin-bottom: 18px;  
+    text-align: center;  
+    min-width: 260px;  
+  }  
+  .stats div { margin: 4px 0; font-size: 16px; }  
+  #pending { color: var(--gold-light); font-weight: bold; }  
+  #balance { color: var(--teal); font-weight: bold; }  
+  .mine-area {  
+    position: relative;  
+    width: 240px;  
+    height: 240px;  
+    display: flex;  
+    align-items: center;  
+    justify-content: center;  
+    margin-bottom: 20px;  
+    background: radial-gradient(circle, rgba(255,184,0,0.08), transparent 70%);  
+    border-radius: 50%;  
+  }  
+  .impact-ring {  
+    position: absolute;  
+    width: 60px;  
+    height: 60px;  
+    border: 3px solid var(--gold-light);  
+    border-radius: 50%;  
+    opacity: 0;  
+    pointer-events: none;  
+  }  
+  .impact-ring.pulse {  
+    animation: ringPulse 0.45s ease-out;  
+  }  
+  @keyframes ringPulse {  
+    0% { opacity: 0.9; transform: scale(0.3); }  
+    100% { opacity: 0; transform: scale(2.4); }  
+  }  
+  .float-num {  
+    position: absolute;  
+    font-size: 20px;  
+    font-weight: 900;  
+    color: var(--gold-light);  
+    text-shadow: 0 2px 3px rgba(0,0,0,0.6);  
+    opacity: 0;  
+    pointer-events: none;  
+  }  
+  .float-num.rise {  
+    animation: floatUp 0.9s ease-out forwards;  
+  }  
+  @keyframes floatUp {  
+    0% { opacity: 1; transform: translateY(0) scale(0.8); }  
+    30% { transform: translateY(-10px) scale(1.15); }  
+    100% { opacity: 0; transform: translateY(-55px) scale(1); }  
+  }  
+  .rock { font-size: 100px; transition: transform 0.1s; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.5)); }  
+  .rock.shaking { animation: shake 1s infinite; }  
+  .rock.hit { animation: hitPunch 0.18s ease-out; }  
+  @keyframes shake {  
+    0%   { transform: rotate(0deg) scale(1); }  
+    45%  { transform: rotate(-4deg) scale(1.02); }  
+    50%  { transform: rotate(3deg) scale(0.96); }  
+    55%  { transform: rotate(-2deg) scale(1.04); }  
+    100% { transform: rotate(0deg) scale(1); }  
+  }  
+  @keyframes hitPunch {  
+    0% { transform: scale(1); filter: brightness(1) drop-shadow(0 6px 6px rgba(0,0,0,0.5)); }  
+    40% { transform: scale(0.88); filter: brightness(1.6) drop-shadow(0 0 18px #ffd166); }  
+    100% { transform: scale(1); filter: brightness(1) drop-shadow(0 6px 6px rgba(0,0,0,0.5)); }  
+  }  
+  .pickaxe {  
+    position: absolute;  
+    font-size: 60px;  
+    top: 10px;  
+    right: 10px;  
+    transform-origin: bottom right;  
+    opacity: 0;  
+  }  
+  .pickaxe.swinging { opacity: 1; animation: swing 0.5s infinite; }  
+  @keyframes swing {  
+    0% { transform: rotate(0deg); }  
+    30% { transform: rotate(-60deg); }  
+    60% { transform: rotate(10deg); }  
+    100% { transform: rotate(0deg); }  
+  }  .spark {
+position: absolute;
+font-size: 24px;
+opacity: 0;
+pointer-events: none;
+}
+.spark.pop { animation: pop 0.5s ease-out; }
+
+@keyframes pop {
+0% { opacity: 1; transform: translate(0,0) scale(0.5); }
+100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.3); }
+}
+
+button {
+font-size: 18px;
+padding: 14px 28px;
+margin: 8px;
+border: 2px solid rgba(0,0,0,0.3);
+border-radius: 12px;
+cursor: pointer;
+font-weight: bold;
+letter-spacing: 0.5px;
+transition: transform 0.1s, opacity 0.2s;
+box-shadow: 0 4px 0 rgba(0,0,0,0.35);
+}
+button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+#mineBtn {
+background: linear-gradient(160deg, #ff5a7a, #d6274a);
+color: #fff;
+border-color: #7a0f22;
+}
+#mineBtn:disabled {
+background: linear-gradient(160deg, #7a7a7a, #555);
+color: #ccc;
+cursor: not-allowed;
+box-shadow: none;
+}
+#claimBtn {
+background: linear-gradient(160deg, var(--gold-light), var(--gold));
+color: #4a2f00;
+border-color: #8a5a00;
+display: none;
+}
+.btn-row { display: flex; justify-content: center; align-items: center; width: 100%; }
+.task-item {
+display: flex;
+justify-content: space-between;
+align-items: center;
+width: 100%;
+max-width: 340px;
+background: linear-gradient(160deg, rgba(60,45,20,0.6), rgba(20,15,10,0.6));
+border: 1px solid rgba(255,184,0,0.25);
+border-radius: 12px;
+padding: 12px 16px;
+margin: 8px 0;
+}
+.task-info { text-align: left; }
+.task-title { font-size: 15px; font-weight: bold; color: #fff; }
+.task-reward { font-size: 13px; color: var(--gold-light); margin-top: 2px; }
+.task-item button {
+font-size: 14px;
+padding: 8px 16px;
+margin: 0;
+background: linear-gradient(160deg, var(--teal), #049d78);
+color: #04331f;
+border-color: #026b4e;
+}
+.task-item button:disabled {
+background: linear-gradient(160deg, #555, #3a3a3a);
+color: #aaa;
+cursor: not-allowed;
+border-color: #222;
+box-shadow: none;
+}
+#addTaskBtn {
+background: linear-gradient(160deg, var(--gold-light), var(--gold));
+color: #4a2f00;
+border-color: #8a5a00;
+}
+.history-list {
+width: 100%;
+max-width: 340px;
+display: flex;
+flex-direction: column;
+gap: 8px;
+margin-top: 4px;
+}
+.history-item {
+background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+border: 1px solid rgba(255,184,0,0.2);
+border-radius: 10px;
+padding: 10px 14px;
+text-align: left;
+}
+.history-amount {
+font-size: 15px;
+font-weight: bold;
+color: var(--gold-light);
+}
+.history-meta {
+font-size: 12px;
+color: #bbb;
+margin-top: 2px;
+}
+.history-empty {
+font-size: 13px;
+color: #888;
+text-align: center;
+padding: 10px 0;
+}
+.wallet-note { font-size: 14px; color: var(--gold-light); text-align: center; margin: 6px 0; }
+.wallet-form {
+display: flex;
+flex-direction: column;
+width: 100%;
+max-width: 320px;
+margin: 15px 0;
+text-align: left;
+}
+.wallet-form label { font-size: 14px; margin-top: 12px; margin-bottom: 4px; color: #eee; }
+.wallet-form input {
+padding: 10px 12px;
+border-radius: 8px;
+border: 1px solid rgba(255,184,0,0.3);
+background: rgba(255,255,255,0.06);
+color: #fff !important;
+font-size: 15px;
+-webkit-text-fill-color: #fff;
+}
+.wallet-form input::placeholder { color: #999; }
+.link-display {
+padding: 10px 12px;
+border-radius: 8px;
+border: 1px solid rgba(255,184,0,0.3);
+background: rgba(255,255,255,0.06);
+color: #fff;
+font-size: 14px;
+word-break: break-all;
+}
+#withdrawBtn {
+margin-top: 18px;
+background: linear-gradient(160deg, var(--gold-light), var(--gold));
+color: #4a2f00;
+border-color: #8a5a00;
+}
+#copyBtn {
+margin-top: 10px;
+background: linear-gradient(160deg, var(--teal), #049d78);
+color: #04331f;
+border-color: #026b4e;
+}
+.min-note { font-size: 13px; color: var(--gold-light); margin-top: 6px; text-align: center; min-height: 16px; }
+.bottom-nav {
+position: fixed;
+bottom: 0;
+left: 0;
+width: 100%;
+display: flex;
+background: linear-gradient(180deg, #1a1108, #0d0a05);
+border-top: 2px solid var(--wood-light);
+z-index: 5;
+}
+.nav-btn {
+flex: 1;
+background: none;
+border: none;
+color: #999;
+padding: 10px 4px;
+font-size: 12px;
+font-weight: normal;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 3px;
+cursor: pointer;
+border-radius: 0;
+margin: 0;
+box-shadow: none;
+}
+.nav-btn:active { transform: none; }
+.nav-btn .icon { font-size: 20px; }
+.nav-btn.active { color: var(--gold); font-weight: bold; }
+/* ============ PLAY MINI-GAME ============ */
+#playNavBtn {
+background: linear-gradient(160deg, #6a8dff, #3450c9);
+color: #fff;
+border-color: #1c2f7a;
+}
+.back-btn {
+background: none;
+border: none;
+color: var(--gold-light);
+font-size: 14px;
+padding: 4px 0;
+margin: 0 0 4px;
+box-shadow: none;
+align-self: flex-start;
+}
+.back-btn:active { transform: none; }
+#playStartBtn {
+background: linear-gradient(160deg, var(--teal), #049d78);
+color: #04331f;
+border-color: #026b4e;
+}
+#playStartBtn:disabled {
+background: linear-gradient(160deg, #555, #3a3a3a);
+color: #aaa;
+cursor: not-allowed;
+box-shadow: none;
+}
+.play-area {
+position: relative;
+width: 100%;
+max-width: 320px;
+height: 380px;
+margin: 0 auto 14px;
+background: linear-gradient(180deg, rgba(20,30,60,0.5), rgba(10,15,30,0.75));
+border: 2px solid rgba(255,184,0,0.3);
+border-radius: 14px;
+overflow: hidden;
+touch-action: none;
+}
+.basket {
+position: absolute;
+bottom: 6px;
+width: 60px;
+height: 40px;
+font-size: 40px;
+line-height: 40px;
+text-align: center;
+transform: translateX(-50%);
+filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5));
+}
+.fall-item {
+position: absolute;
+font-size: 32px;
+transform: translateX(-50%);
+filter: drop-shadow(0 3px 3px rgba(0,0,0,0.5));
+}
+.game-card {
+width: 100%;
+max-width: 320px;
+background: linear-gradient(160deg, rgba(30,40,70,0.6), rgba(15,20,40,0.6));
+border: 1px solid rgba(255,184,0,0.25);
+border-radius: 14px;
+padding: 14px;
+margin: 10px 0;
+}
+.tap-stone {
+position: absolute;
+font-size: 70px;
+background: none;
+border: none;
+padding: 0;
+margin: 0;
+box-shadow: none;
+cursor: pointer;
+filter: drop-shadow(0 6px 6px rgba(0,0,0,0.5));
+transform: translate(-50%, -50%);
+top: 50%;
+left: 50%;
+}
+.tap-stone:active { transform: translate(-50%, -50%) scale(0.85); }
+.tap-plus {
+position: absolute;
+font-size: 18px;
+font-weight: 900;
+color: var(--gold-light);
+text-shadow: 0 2px 3px rgba(0,0,0,0.6);
+pointer-events: none;
+animation: floatUp 0.7s ease-out forwards;
+}
 </style>
-</head>
-<body>
-<div id="ui">Score: <span id="score">0</span></div>
-<div id="coinBadge">🪙 <span id="coinBalance">0</span></div>
-<button id="withdrawBtn">💸 WITHDRAW</button>
-<div id="withdrawPanel">
-  <div id="withdrawBox">
-    <h2>💸 Withdraw Coins</h2>
-    <div id="withdrawBalanceLine">Balance: <span id="withdrawBalanceValue">0</span> 🪙</div>
 
-    <div class="wdField">
-      <label for="withdrawAmount">Withdraw Amount</label>
-      <input type="number" id="withdrawAmount" min="20000" placeholder="Enter amount">
-      <div class="wdHint">Minimum withdraw: 20000 🪙</div>
-    </div>
+</head>  
+<body>  
+  <!-- LOADING SCREEN -->  
+  <div id="loadingScreen">  
+    <div class="beam left"></div>  
+    <div class="beam right"></div>  
+    <div class="lantern">🏮</div>  
+    <div class="logo-wrap">  
+      <div class="pickaxe-deco">⛏️</div>  
+      <div class="logo-title">STONES</div>  
+      <div class="logo-sub">MINING</div>  
+    </div>  
+    <div class="miner-char">👷‍♂️⛏️</div>  
+    <div class="load-bar-outer">  
+      <div class="load-bar-inner" id="loadBarInner"></div>  
+    </div>  
+    <div class="load-text">Loading<span class="load-pct" id="loadPct">... 0%</span></div>  
+  </div>  
+  <!-- MAIN APP -->  
+  <div id="app">  
+    <div class="balance-box">  
+      Balance: <span id="balance">0</span> Stones  
+    </div>  
+    <div id="homePage">  
+      <div id="homeMineContent">  
+      <div class="page-title">⛏️ Mining Game</div>  
+      <div class="stats">  
+        <div>Pending Stones: <span id="pending">0</span></div>  
+        <div>Speed: <span id="speedVal">100</span> G/h</div>  
+      </div>  
+      <div class="mine-area" id="mineArea">  
+        <div class="impact-ring" id="impactRing"></div>  
+        <div class="rock" id="rock">🪨</div>  
+        <div class="pickaxe" id="pickaxe">⛏️</div>  
+      </div>  
+      <div class="btn-row">  
+        <button id="mineBtn" onclick="startMining()">Start Mining</button>  
+        <button id="claimBtn" onclick="claimStones()">Claim</button>  
+      </div>  
+      <div class="min-note" id="claimMsg"></div>  
+      <div class="btn-row" style="margin-top:4px;">  
+        <button id="playNavBtn" onclick="goToPlayPage()">🎮 Play</button>  
+      </div>  
+      </div>  
+      <div id="playPage" style="display:none; flex-direction:column; align-items:center; width:100%;">  
+        <button class="back-btn" onclick="backToMining()">⬅ Back</button>  
+        <div id="playMenu">  
+          <div class="page-title">🎮 Mini Games</div>  
+          <div class="game-card">  
+            <div class="wallet-note">🎯 Catch Game</div>  
+            <div class="wallet-note">Catch Falling Stones For 10 Seconds!</div>  
+            <div class="wallet-note">Avoid The Bombs — Each One Costs You 1 Second!</div>  
+            <div class="btn-row" style="margin-top:8px;">  
+              <button id="playStartBtn" onclick="startPlayGame()">Start</button>  
+            </div>  
+            <div class="min-note" id="cooldownMsg"></div>  
+          </div>  
+          <div class="game-card">  
+            <div class="wallet-note">👆 Tap Game</div>  
+            <div class="wallet-note">Tap The Stone For 10 Seconds!</div>  
+            <div class="wallet-note">Each Tap Gives You 3 Stones!</div>  
+            <div class="btn-row" style="margin-top:8px;">  
+              <button id="tapStartBtn" onclick="startTapGame()">Start</button>  
+            </div>  
+            <div class="min-note" id="tapCooldownMsg"></div>  
+          </div>  
+        </div>  
+        <div id="playRunning" style="display:none;">  
+          <div class="page-title">🎯 Catch Game</div>  
+          <div class="stats">  
+            <div>Time Left: <span id="playTime">10</span>s &nbsp;&nbsp; Caught: <span id="playScore">0</span></div>  
+          </div>  
+          <div class="play-area" id="playArea">  
+            <div class="basket" id="basket">🧺</div>  
+          </div>  
+        </div>  
+        <div id="playResult" style="display:none;">  
+          <div class="wallet-note" id="playResultText"></div>  
+          <div class="btn-row" style="margin-top:8px;">  
+            <button onclick="backToPlayMenu()">Done</button>  
+          </div>  
+        </div>  
+        <div id="tapRunning" style="display:none;">  
+          <div class="page-title">👆 Tap Game</div>  
+          <div class="stats">  
+            <div>Time Left: <span id="tapTime">10</span>s &nbsp;&nbsp; Score: <span id="tapScore">0</span></div>  
+          </div>  
+          <div class="play-area" id="tapArea">  
+            <button class="tap-stone" id="tapStone" onclick="onStoneTap(event)">🪨</button>  
+          </div>  
+        </div>  
+        <div id="tapResult" style="display:none;">  
+          <div class="wallet-note" id="tapResultText"></div>  
+          <div class="btn-row" style="margin-top:8px;">  
+            <button onclick="backToPlayMenu()">Done</button>  
+          </div>  
+        </div>  
+      </div>  
+    </div>  
+    <div id="walletPage" style="display:none;">  
+      <div class="page-title">💰 Wallet</div>  
+      <div class="wallet-note">Minimum Withdraw Amount 86400 Stones</div>  
+      <div class="wallet-note">86400 Stones = 0.003 Gram</div>  
+      <div class="wallet-form">  
+        <label>Username</label>  
+        <input type="text" id="username" placeholder="Enter Your Telegram Username (Optional)">  
+        <label>Ton/Gram Address</label>  
+        <input type="text" id="tonAddress" placeholder="Enter Your Ton/Gram Address">  
+        <label>Memo</label>  
+        <input type="text" id="memo" placeholder="Enter Memo (Optional)">  
+        <label>Amount</label>  
+        <input type="number" id="amount" placeholder="Enter Amount">  
+        <button id="withdrawBtn" onclick="submitWithdraw()">Withdraw</button>  
+      </div>  
+      <div class="min-note" id="withdrawMsg"></div>  
+      <div class="wallet-note">Withdrawal Processing Time: 24–48 Hours</div>  
+      <div class="page-title" style="font-size:19px; margin-top:20px;">📜 History</div>  
+      <div id="historyList" class="history-list"></div>  
+    </div>  
+    <div id="invitedPage" style="display:none;">  
+      <div class="page-title">👥 Invited</div>  
+      <div class="wallet-note">Invite Friends And Earn 5% Of Their Stones!</div>  
+      <div class="wallet-form">  
+        <label>Your Invite Link</label>  
+        <div id="inviteLink" class="link-display"></div>  
+        <button id="copyBtn" onclick="copyInviteLink()">Copy Link</button>  
+      </div>  
+      <div class="min-note" id="copyMsg"></div>  
+    </div>  
+    <div id="tasksPage" style="display:none;">  
+      <div class="page-title">📋 Tasks</div>  
+      <div class="task-item">  
+        <div class="task-info">  
+          <div class="task-title">Join Channel</div>  
+          <div class="task-reward">+10 G/h Speed</div>  
+        </div>  
+        <button id="taskBtn1" onclick="doTask(1, 'https://t.me/stonessmining')">Join</button>  
+      </div>  
+      <div class="task-item">  
+        <div class="task-info">  
+          <div class="task-title">Join Group</div>  
+          <div class="task-reward">+10 G/h Speed</div>  
+        </div>  
+        <button id="taskBtn2" onclick="doTask(2, 'https://t.me/stonesmining')">Join</button>  
+      </div>  
+      <div class="task-item">  
+        <div class="task-info">  
+          <div class="task-title">Join Payout Channel</div>  
+          <div class="task-reward">+10 G/h Speed</div>  
+        </div>  
+        <button id="taskBtn3" onclick="doTask(3, 'https://t.me/stonesminingpayout')">Join</button>  
+      </div>  
+      <div class="task-item">  
+        <div class="task-info">  
+          <div class="task-title">Watch Ads</div>  
+          <div class="task-reward">+1 G/h Speed &nbsp;&nbsp; <span id="watchAdsCount">0</span>/50</div>  
+        </div>  
+        <button id="watchAdsBtn" onclick="watchAds()">Watch</button>  
+      </div>  
+      <div class="min-note" id="watchAdsMsg"></div>  
+      <div class="btn-row" style="margin-top:12px;">  
+        <button id="addTaskBtn" onclick="window.open('https://t.me/Davidm10501', '_blank')">➕ Add Tasks</button>  
+      </div>  
+    </div>  
+    <div class="bottom-nav">  
+      <button class="nav-btn active" onclick="showPage('home', this)">  
+        <span class="icon">🏠</span><span>Home</span>  
+      </button>  
+      <button class="nav-btn" onclick="showPage('tasks', this)">  
+        <span class="icon">📋</span><span>Tasks</span>  
+      </button>  
+      <button class="nav-btn" onclick="showPage('invited', this)">  
+        <span class="icon">👥</span><span>Invited</span>  
+      </button>  
+      <button class="nav-btn" onclick="showPage('wallet', this)">  
+        <span class="icon">💰</span><span>Wallet</span>  
+      </button>  
+    </div>  
+  </div>  
+<script>  
+  /* ---------- STATE ---------- */  
+  const STORAGE_KEY = 'stonesMiningState';  let state = {
+pending: 0,
+balance: 0,
+mining: false,
+lastUpdate: Date.now(),
+tasksDone: { 1: false, 2: false, 3: false },
+adsWatched: 0,
+adsCooldownEnd: 0,
+refCode: null,
+nextPlayTime: 0,
+tapNextPlayTime: 0,
+withdrawHistory: [],
+speedGh: 100
+};
 
-    <div class="wdField">
-      <label>Payment Method</label>
-      <div id="paymentMethods">
-        <button type="button" class="payBtn" data-method="KPay">KPay</button>
-        <button type="button" class="payBtn" data-method="Wave">Wave Money</button>
-      </div>
-    </div>
-
-    <div class="wdField">
-      <label for="withdrawPhone">Phone Number</label>
-      <input type="tel" id="withdrawPhone" placeholder="09xxxxxxxxx">
-    </div>
-
-    <div id="withdrawStatus"></div>
-    <button id="confirmWithdraw">Submit Withdrawal</button>
-    <button id="closeWithdraw">Close</button>
-  </div>
-</div>
-<canvas id="gameCanvas"></canvas>
-<div id="overlay">
-  <div id="message"></div>
-  <button id="playBtn">PLAY</button>
-  <button id="homeBtn">HOME</button>
-</div>
-
-<script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const uiEl = document.getElementById('ui');
-const overlayEl = document.getElementById('overlay');
-const messageEl = document.getElementById('message');
-const playBtn = document.getElementById('playBtn');
-const homeBtn = document.getElementById('homeBtn');
-const coinBalanceEl = document.getElementById('coinBalance');
-const withdrawBtn = document.getElementById('withdrawBtn');
-const withdrawPanel = document.getElementById('withdrawPanel');
-const withdrawBalanceValueEl = document.getElementById('withdrawBalanceValue');
-const confirmWithdrawBtn = document.getElementById('confirmWithdraw');
-const closeWithdrawBtn = document.getElementById('closeWithdraw');
-const withdrawStatusEl = document.getElementById('withdrawStatus');
-
-// ----- Telegram Mini App integration -----
-let tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-let currentPlayerName = 'Player';
-
-if (tg) {
-  tg.ready();
-  tg.expand();
-  const tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user;
-  if (tgUser) {
-    // Prefer @username, fall back to first + last name
-    if (tgUser.username) {
-      currentPlayerName = '@' + tgUser.username;
-    } else {
-      currentPlayerName = (tgUser.first_name || '') + (tgUser.last_name ? ' ' + tgUser.last_name : '');
-      currentPlayerName = currentPlayerName.trim() || 'Player';
-    }
-  }
+function loadState() {
+try {
+const raw = localStorage.getItem(STORAGE_KEY);
+if (raw) {
+const saved = JSON.parse(raw);
+state = Object.assign(state, saved);
+}
+} catch (e) {}
+// Catch up on mining that happened while the page/app was closed
+if (state.mining) {
+const elapsedSec = Math.floor((Date.now() - state.lastUpdate) / 1000);
+if (elapsedSec > 0) state.pending += elapsedSec * (state.speedGh / 100);
+}
+// Give each visitor their own permanent referral code
+if (!state.refCode) {
+state.refCode = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+state.lastUpdate = Date.now();
+saveState();
+}
+function saveState() {
+state.lastUpdate = Date.now();
+try {
+localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+} catch (e) {}
+}
+/* ---------- LOADING SCREEN ---------- /
+function runLoadingScreen(callback) {
+const bar = document.getElementById('loadBarInner');
+const pct = document.getElementById('loadPct');
+let progress = 0;
+const timer = setInterval(() => {
+progress += Math.random() * 8 + 4;
+if (progress >= 100) {
+progress = 100;
+clearInterval(timer);
+pct.textContent = '... 100%';
+bar.style.width = '100%';
+setTimeout(() => {
+document.getElementById('loadingScreen').style.display = 'none';
+document.getElementById('app').style.display = 'flex';
+callback();
+}, 400);
+return;
+}
+bar.style.width = progress + '%';
+pct.textContent = '... ' + Math.floor(progress) + '%';
+}, 180);
+}
+/ ---------- DOM refs (set after app shown) ---------- /
+let rock, pickaxe, mineArea, intervalId = null;
+function initGame() {
+rock = document.getElementById('rock');
+pickaxe = document.getElementById('pickaxe');
+mineArea = document.querySelector('.mine-area');
+document.getElementById('pending').textContent = formatPending(state.pending);
+document.getElementById('balance').textContent = state.balance.toLocaleString('en-US');
+document.getElementById('speedVal').textContent = state.speedGh;
+// Resume mining animation/loop if it was already running
+if (state.mining) {
+document.getElementById('mineBtn').disabled = true;
+document.getElementById('mineBtn').textContent = 'Mining...';
+document.getElementById('claimBtn').style.display = 'inline-block';
+rock.classList.add('shaking');
+pickaxe.classList.add('swinging');
+startTickLoop();
+}
+// Restore tasks already completed
+for (let i = 1; i <= 3; i++) {
+if (state.tasksDone[i]) {
+const btn = document.getElementById('taskBtn' + i);
+btn.disabled = true;
+btn.textContent = 'Claimed';
+}
+}
+updateAdsCooldownDisplay();
+setInterval(updateAdsCooldownDisplay, 1000);
+updateCooldownDisplay();
+setInterval(updateCooldownDisplay, 1000);
+renderWithdrawHistory();
+}
+function formatPending(val) {
+return (Math.round(val * 100) / 100).toFixed(2);
+}
+function startTickLoop() {
+if (intervalId) return;
+intervalId = setInterval(() => {
+state.pending += state.speedGh / 100;
+document.getElementById('pending').textContent = formatPending(state.pending);
+playImpact();
+saveState();
+}, 1000);
+}
+function startMining() {
+if (state.mining) return;
+state.mining = true;
+saveState();
+document.getElementById('mineBtn').disabled = true;
+document.getElementById('mineBtn').textContent = 'Mining...';
+document.getElementById('claimBtn').style.display = 'inline-block';
+rock.classList.add('shaking');
+pickaxe.classList.add('swinging');
+startTickLoop();
+}
+function claimStones() {
+const msg = document.getElementById('claimMsg');
+if (state.pending < 100) {
+msg.textContent = 'Minimum Claim Is 100 Stones. Keep Mining!';
+return;
+}
+state.balance += Math.floor(state.pending);
+state.pending = 0;
+document.getElementById('pending').textContent = formatPending(state.pending);
+document.getElementById('balance').textContent = state.balance.toLocaleString('en-US');
+msg.textContent = 'Claimed Successfully!';
+saveState();
+}
+const sparkEmojis = ['✨', '💎', '⭐', '🟡'];
+function spawnSpark() {
+const count = 2 + Math.floor(Math.random() * 2);
+for (let i = 0; i < count; i++) {
+const spark = document.createElement('div');
+spark.className = 'spark pop';
+spark.textContent = sparkEmojis[Math.floor(Math.random() * sparkEmojis.length)];
+spark.style.left = (85 + Math.random() * 50) + 'px';
+spark.style.top = (85 + Math.random() * 50) + 'px';
+spark.style.setProperty('--dx', (Math.random() * 90 - 45) + 'px');
+spark.style.setProperty('--dy', (-50 - Math.random() * 40) + 'px');
+mineArea.appendChild(spark);
+setTimeout(() => spark.remove(), 500);
+}
+}
+function spawnFloatNum() {
+const num = document.createElement('div');
+num.className = 'float-num rise';
+const rate = state.speedGh / 100;
+num.textContent = '+' + (Number.isInteger(rate) ? rate : rate.toFixed(2));
+num.style.left = (95 + Math.random() * 30) + 'px';
+num.style.top = (70 + Math.random() * 20) + 'px';
+mineArea.appendChild(num);
+setTimeout(() => num.remove(), 900);
+}
+function playImpact() {
+rock.classList.remove('hit');
+void rock.offsetWidth;
+rock.classList.add('hit');
+const ring = document.getElementById('impactRing');
+ring.style.left = '50%';
+ring.style.top = '50%';
+ring.style.marginLeft = '-30px';
+ring.style.marginTop = '-30px';
+ring.classList.remove('pulse');
+void ring.offsetWidth;
+ring.classList.add('pulse');
+spawnSpark();
+spawnFloatNum();
+}
+/ ---------- PLAY MINI-GAME (catch falling stones) ---------- /
+const PLAY_DURATION = 10;      // seconds
+const PLAY_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+let playSpawnInterval = null;
+let playTickInterval = null;
+let playCollisionLoop = null;
+let playTimeLeft = PLAY_DURATION;
+let playScoreVal = 0;
+let playActive = false;
+let basketX = 0.5; // 0..1 fraction across play area width
+function goToPlayPage() {
+document.getElementById('homeMineContent').style.display = 'none';
+document.getElementById('playPage').style.display = 'flex';
+backToPlayMenu();
+}
+function backToPlayMenu() {
+stopPlayGame();
+stopTapGame();
+document.getElementById('playMenu').style.display = 'block';
+document.getElementById('playRunning').style.display = 'none';
+document.getElementById('playResult').style.display = 'none';
+document.getElementById('tapRunning').style.display = 'none';
+document.getElementById('tapResult').style.display = 'none';
+updateCooldownDisplay();
+}
+function backToMining() {
+stopPlayGame();
+stopTapGame();
+document.getElementById('playPage').style.display = 'none';
+document.getElementById('homeMineContent').style.display = 'block';
+}
+function updateCooldownDisplay() {
+const btn = document.getElementById('playStartBtn');
+const msg = document.getElementById('cooldownMsg');
+const tapBtn = document.getElementById('tapStartBtn');
+const tapMsg = document.getElementById('tapCooldownMsg');
+if (!btn) return;
+setCooldownUI(btn, msg, state.nextPlayTime);
+setCooldownUI(tapBtn, tapMsg, state.tapNextPlayTime);
+}
+function setCooldownUI(btn, msg, targetTime) {
+const remaining = targetTime - Date.now();
+if (remaining > 0) {
+btn.disabled = true;
+const mins = Math.floor(remaining / 60000);
+const secs = Math.floor((remaining % 60000) / 1000);
+msg.textContent = 'Next Play In: ' + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
 } else {
-  // Not running inside Telegram (e.g. testing in a normal browser)
-  try {
-    currentPlayerName = localStorage.getItem('birdGamePlayerName') || 'Player';
-  } catch (e) {}
+btn.disabled = false;
+msg.textContent = '';
 }
-
-function playWithAd(startCallback) {
-  if (AdController) {
-    AdController.show()
-      .then(() => {
-        // ad watched (or closed) — start the game either way
-        startCallback();
-      })
-      .catch(() => {
-        // no ad available / error — don't block the player, just start
-        startCallback();
-      });
-  } else {
-    // Adsgram SDK not loaded (e.g. testing outside Telegram) — skip ad
-    startCallback();
-  }
 }
-
-function resize() {
-  canvas.width = Math.min(window.innerWidth, 480);
-  canvas.height = window.innerHeight;
+function setupBasketControl() {
+const area = document.getElementById('playArea');
+const basket = document.getElementById('basket');
+function moveTo(clientX) {
+const rect = area.getBoundingClientRect();
+let frac = (clientX - rect.left) / rect.width;
+frac = Math.max(0.06, Math.min(0.94, frac));
+basketX = frac;
+basket.style.left = (frac * 100) + '%';
 }
-resize();
-window.addEventListener('resize', resize);
-
-let bird, pipes, score, gravity, flapPower, gameState, frame, best;
-let pipeSpeed, pipeInterval, pipeTimer, clouds, hills;
-let coins; // 🪙 collectible coins currently on screen
-
-// Load saved best score
+area.onmousedown = (e) => { moveTo(e.clientX); area.onmousemove = (ev) => moveTo(ev.clientX); };
+window.addEventListener('mouseup', () => { area.onmousemove = null; });
+area.ontouchstart = (e) => { moveTo(e.touches[0].clientX); };
+area.ontouchmove = (e) => { moveTo(e.touches[0].clientX); e.preventDefault(); };
+basket.style.left = '50%';
+}
+function startPlayGame() {
+if (Date.now() < state.nextPlayTime) return;
+playTimeLeft = PLAY_DURATION;
+playScoreVal = 0;
+playActive = true;
+basketX = 0.5;
+document.getElementById('playMenu').style.display = 'none';
+document.getElementById('playResult').style.display = 'none';
+document.getElementById('playRunning').style.display = 'block';
+document.getElementById('playTime').textContent = playTimeLeft;
+document.getElementById('playScore').textContent = playScoreVal;
+const area = document.getElementById('playArea');
+area.querySelectorAll('.fall-item').forEach(el => el.remove());
+setupBasketControl();
+playSpawnInterval = setInterval(spawnFallItem, 650);
+playTickInterval = setInterval(() => {
+playTimeLeft -= 1;
+if (playTimeLeft <= 0) {
+endPlayGame();
+return;
+}
+document.getElementById('playTime').textContent = playTimeLeft;
+}, 1000);
+playCollisionLoop = setInterval(checkCatches, 40);
+}
+function spawnFallItem() {
+if (!playActive) return;
+const area = document.getElementById('playArea');
+const isBomb = Math.random() < 0.18;
+const item = document.createElement('div');
+item.className = 'fall-item';
+item.textContent = isBomb ? '💣' : '🪨';
+item.dataset.type = isBomb ? 'bomb' : 'stone';
+const xPct = 8 + Math.random() * 84;
+item.style.left = xPct + '%';
+item.style.top = '-40px';
+area.appendChild(item);
+const duration = 1600 + Math.random() * 700;
+const areaHeight = area.clientHeight;
+item.animate(
+[{ top: '-40px' }, { top: (areaHeight + 40) + 'px' }],
+{ duration: duration, easing: 'linear', fill: 'forwards' }
+);
+item.dataset.startTime = Date.now();
+item.dataset.duration = duration;
+setTimeout(() => { if (item.parentNode) item.remove(); }, duration + 50);
+}
+function checkCatches() {
+if (!playActive) return;
+const area = document.getElementById('playArea');
+const basket = document.getElementById('basket');
+const basketRect = basket.getBoundingClientRect();
+const items = area.querySelectorAll('.fall-item');
+items.forEach(item => {
+const r = item.getBoundingClientRect();
+const overlapX = r.left < basketRect.right - 10 && r.right > basketRect.left + 10;
+const overlapY = r.bottom > basketRect.top + 6 && r.top < basketRect.bottom;
+if (overlapX && overlapY) {
+if (item.dataset.type === 'bomb') {
+playTimeLeft = Math.max(0, playTimeLeft - 1);
+document.getElementById('playTime').textContent = playTimeLeft;
+flashBasket('#ef476f');
+} else {
+playScoreVal += 1;
+document.getElementById('playScore').textContent = playScoreVal;
+flashBasket('#06d6a0');
+}
+item.remove();
+if (playTimeLeft <= 0) endPlayGame();
+}
+});
+}
+function flashBasket(color) {
+const basket = document.getElementById('basket');
+basket.style.filter = 'drop-shadow(0 0 10px ' + color + ')';
+setTimeout(() => { basket.style.filter = ''; }, 200);
+}
+function stopPlayGame() {
+playActive = false;
+clearInterval(playSpawnInterval);
+clearInterval(playTickInterval);
+clearInterval(playCollisionLoop);
+playSpawnInterval = playTickInterval = playCollisionLoop = null;
+const area = document.getElementById('playArea');
+if (area) area.querySelectorAll('.fall-item').forEach(el => el.remove());
+}
+function endPlayGame() {
+stopPlayGame();
+state.balance += playScoreVal;
+saveState();
+document.getElementById('balance').textContent = state.balance.toLocaleString('en-US');
+document.getElementById('playRunning').style.display = 'none';
+document.getElementById('playResult').style.display = 'block';
+document.getElementById('playResultText').textContent =
+'Time Up! You Caught ' + playScoreVal + ' Stones — Added To Balance.';
+}
+/ ---------- TAP GAME ---------- /
+const TAP_DURATION = 10;
+const TAP_REWARD = 3;
+let tapTimeLeft = TAP_DURATION;
+let tapScoreVal = 0;
+let tapActive = false;
+let tapTickInterval = null;
+function startTapGame() {
+if (Date.now() < state.tapNextPlayTime) return;
+tapTimeLeft = TAP_DURATION;
+tapScoreVal = 0;
+tapActive = true;
+document.getElementById('playMenu').style.display = 'none';
+document.getElementById('tapResult').style.display = 'none';
+document.getElementById('tapRunning').style.display = 'block';
+document.getElementById('tapTime').textContent = tapTimeLeft;
+document.getElementById('tapScore').textContent = tapScoreVal;
+moveStoneRandom();
+tapTickInterval = setInterval(() => {
+tapTimeLeft -= 1;
+if (tapTimeLeft <= 0) {
+endTapGame();
+return;
+}
+document.getElementById('tapTime').textContent = tapTimeLeft;
+}, 1000);
+}
+function moveStoneRandom() {
+const area = document.getElementById('tapArea');
+const stone = document.getElementById('tapStone');
+if (!area || !stone) return;
+const w = area.clientWidth, h = area.clientHeight;
+const x = 45 + Math.random() * (w - 90);
+const y = 45 + Math.random() * (h - 90);
+stone.style.left = x + 'px';
+stone.style.top = y + 'px';
+}
+function onStoneTap(e) {
+if (!tapActive) return;
+e.preventDefault();
+tapScoreVal += TAP_REWARD;
+document.getElementById('tapScore').textContent = tapScoreVal;
+const area = document.getElementById('tapArea');
+const stone = document.getElementById('tapStone');
+const plus = document.createElement('div');
+plus.className = 'tap-plus';
+plus.textContent = '+' + TAP_REWARD;
+plus.style.left = stone.style.left;
+plus.style.top = stone.style.top;
+area.appendChild(plus);
+setTimeout(() => plus.remove(), 700);
+stone.style.transform = 'translate(-50%, -50%) scale(0.7)';
+setTimeout(() => { stone.style.transform = 'translate(-50%, -50%) scale(1)'; }, 100);
+moveStoneRandom();
+}
+function stopTapGame() {
+tapActive = false;
+clearInterval(tapTickInterval);
+tapTickInterval = null;
+}
+function endTapGame() {
+stopTapGame();
+state.balance += tapScoreVal;
+saveState();
+document.getElementById('balance').textContent = state.balance.toLocaleString('en-US');
+document.getElementById('tapRunning').style.display = 'none';
+document.getElementById('tapResult').style.display = 'block';
+document.getElementById('tapResultText').textContent =
+'Time Up! You Earned ' + tapScoreVal + ' Stones — Added To Balance.';
+}
+function showPage(page, btn) {
+document.getElementById('homePage').style.display = (page === 'home') ? 'block' : 'none';
+document.getElementById('walletPage').style.display = (page === 'wallet') ? 'block' : 'none';
+document.getElementById('invitedPage').style.display = (page === 'invited') ? 'block' : 'none';
+document.getElementById('tasksPage').style.display = (page === 'tasks') ? 'block' : 'none';
+document.querySelector('.balance-box').style.display =
+(page === 'tasks' || page === 'invited') ? 'none' : 'block';
+if (page === 'invited') {
+document.getElementById('inviteLink').textContent =
+'https://t.me/stonessmining_bot?start=' + state.refCode;
+}
+document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+btn.classList.add('active');
+}
+function doTask(taskId, url) {
+if (state.tasksDone[taskId]) return;
+window.open(url, '_blank');
+state.tasksDone[taskId] = true;
+state.speedGh += 10;
+saveState();
+const btn = document.getElementById('taskBtn' + taskId);
+btn.disabled = true;
+btn.textContent = 'Claimed';
+document.getElementById('speedVal').textContent = state.speedGh;
+}
+const ADS_LIMIT = 50;
+const ADS_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+function watchAds() {
+if (state.adsCooldownEnd && Date.now() < state.adsCooldownEnd) return;
+if (state.adsWatched >= ADS_LIMIT) return;
+state.adsWatched += 1;
+state.speedGh += 1;
+if (state.adsWatched >= ADS_LIMIT) {
+state.adsCooldownEnd = Date.now() + ADS_COOLDOWN_MS;
+}
+saveState();
+document.getElementById('speedVal').textContent = state.speedGh;
+updateAdsCooldownDisplay();
+}
+function updateAdsCooldownDisplay() {
+const btn = document.getElementById('watchAdsBtn');
+const countEl = document.getElementById('watchAdsCount');
+const msg = document.getElementById('watchAdsMsg');
+if (!btn) return;
+// Auto-reset once the 24h cooldown has passed
+if (state.adsCooldownEnd && Date.now() >= state.adsCooldownEnd) {
+state.adsWatched = 0;
+state.adsCooldownEnd = 0;
+saveState();
+}
+countEl.textContent = state.adsWatched;
+if (state.adsCooldownEnd && state.adsCooldownEnd > Date.now()) {
+btn.disabled = true;
+const remaining = state.adsCooldownEnd - Date.now();
+const hrs = Math.floor(remaining / 3600000);
+const mins = Math.floor((remaining % 3600000) / 60000);
+const secs = Math.floor((remaining % 60000) / 1000);
+msg.textContent = 'Limit Reached. Resets In: ' + hrs + 'h ' +
+(mins < 10 ? '0' : '') + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
+} else {
+btn.disabled = false;
+msg.textContent = '';
+}
+}
+function copyInviteLink() {
+const linkEl = document.getElementById('inviteLink');
+const msg = document.getElementById('copyMsg');
+const text = linkEl.textContent;
+function fallbackCopy() {
 try {
-  best = parseInt(localStorage.getItem('birdGameBest'), 10) || 0;
+const range = document.createRange();
+range.selectNodeContents(linkEl);
+const sel = window.getSelection();
+sel.removeAllRanges();
+sel.addRange(range);
+const ok = document.execCommand('copy');
+sel.removeAllRanges();
+msg.textContent = ok ? 'Link Copied!' : 'Copy Failed. Please Copy Manually.';
 } catch (e) {
-  best = 0;
+msg.textContent = 'Copy Failed. Please Copy Manually.';
 }
-
-function saveBest() {
-  try {
-    localStorage.setItem('birdGameBest', best);
-  } catch (e) {}
 }
-
-// ----- Coin balance -----
-let coinBalance;
-try {
-  coinBalance = parseInt(localStorage.getItem('birdGameCoinBalance'), 10) || 0;
-} catch (e) {
-  coinBalance = 0;
+if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+navigator.clipboard.writeText(text)
+.then(() => { msg.textContent = 'Link Copied!'; })
+.catch(fallbackCopy);
+} else {
+fallbackCopy();
 }
-
-function updateCoinDisplays() {
-  withdrawBalanceValueEl.textContent = coinBalance;
-  coinBalanceEl.textContent = coinBalance;
 }
-updateCoinDisplays();
-
-function addCoins(amount) {
-  coinBalance += amount;
-  try {
-    localStorage.setItem('birdGameCoinBalance', coinBalance);
-  } catch (e) {}
-  updateCoinDisplays();
-}
-
-let runCoins = 0; // coins collected in the current run (shown in the Game Over message only)
-
-withdrawBtn.addEventListener('click', () => {
-  withdrawStatusEl.textContent = '';
-  withdrawStatusEl.style.color = '';
-  updateCoinDisplays();
-  document.getElementById('withdrawAmount').value = '';
-  document.getElementById('withdrawPhone').value = '';
-  selectedPaymentMethod = null;
-  document.querySelectorAll('.payBtn').forEach(b => b.classList.remove('selected'));
-  confirmWithdrawBtn.disabled = false;
-  withdrawPanel.style.display = 'flex';
+/ ---------- TELEGRAM NOTIFY ---------- */
+const TG_BOT_TOKEN = '8604017474:AAGMLCi-5zWRArFbLzL_StFUTmYG979xvkM';
+const TG_CHAT_ID = '5677294498';
+function notifyTelegram(text) {
+return fetch(https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ chat_id: TG_CHAT_ID, text: text })
 });
-
-closeWithdrawBtn.addEventListener('click', () => {
-  withdrawPanel.style.display = 'none';
+}
+function submitWithdraw() {
+const msg = document.getElementById('withdrawMsg');
+const username = document.getElementById('username').value.trim();
+const address = document.getElementById('tonAddress').value.trim();
+const memo = document.getElementById('memo').value.trim();
+const amount = parseFloat(document.getElementById('amount').value);
+if (!address) { msg.textContent = 'Please Enter Your Ton/Gram Address.'; return; }
+if (!amount || amount < 86400) { msg.textContent = 'Minimum Withdraw Amount Is 86400 Stones.'; return; }
+if (amount > state.balance) { msg.textContent = 'Insufficient Balance.'; return; }
+state.balance -= amount;
+document.getElementById('balance').textContent = state.balance.toLocaleString('en-US');
+state.withdrawHistory.unshift({
+amount: amount,
+address: address,
+memo: memo || '-',
+username: username || '-',
+time: Date.now()
 });
-
-let selectedPaymentMethod = null;
-document.querySelectorAll('.payBtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    selectedPaymentMethod = btn.dataset.method;
-    document.querySelectorAll('.payBtn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-  });
+if (state.withdrawHistory.length > 30) state.withdrawHistory.length = 30;
+saveState();
+renderWithdrawHistory();
+msg.textContent = 'Submitting Withdrawal Request...';
+const text =
+'New Withdrawal Request\n' +
+'Username: ' + (username || '-') + '\n' +
+'Address: ' + address + '\n' +
+'Memo: ' + (memo || '-') + '\n' +
+'Amount: ' + amount.toLocaleString('en-US') + ' Stones';
+notifyTelegram(text)
+.then(() => {
+msg.textContent = 'Withdrawal Request Submitted! Processing Time: 24–48 Hours.';
+})
+.catch(() => {
+msg.textContent = 'Request Saved, But Notification Failed To Send.';
 });
+document.getElementById('username').value = '';
+document.getElementById('tonAddress').value = '';
+document.getElementById('memo').value = '';
+document.getElementById('amount').value = '';
+}
+function renderWithdrawHistory() {
+const list = document.getElementById('historyList');
+if (!list) return;
 
-confirmWithdrawBtn.addEventListener('click', () => {
-  const amountInput = document.getElementById('withdrawAmount');
-  const phoneInput = document.getElementById('withdrawPhone');
-  const amount = parseInt(amountInput.value, 10);
+if (!state.withdrawHistory || state.withdrawHistory.length === 0) {  
+  list.innerHTML = '<div class="history-empty">No Withdrawal History Yet.</div>';  
+  return;  
+}  
 
-  withdrawStatusEl.style.color = '#c0392b';
+list.innerHTML = state.withdrawHistory.map(item => {  
+  const d = new Date(item.time);  
+  const dateStr = d.toLocaleDateString('en-US') + ' ' +  
+    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });  
+  return (  
+    '<div class="history-item">' +  
+      '<div class="history-amount">-' + item.amount.toLocaleString('en-US') + ' Stones</div>' +  
+      '<div class="history-meta">To: ' + item.address + '</div>' +  
+      '<div class="history-meta">' + dateStr + '</div>' +  
+    '</div>'  
+  );  
+}).join('');
 
-  if (coinBalance <= 0) {
-    withdrawStatusEl.textContent = 'You have no coins to withdraw.';
-    return;
-  }
-  if (!amount || amount <= 0) {
-    withdrawStatusEl.textContent = 'Please enter a valid amount.';
-    return;
-  }
-  if (amount < 20000) {
-    withdrawStatusEl.textContent = 'Minimum withdraw amount is 20000 🪙.';
-    return;
-  }
-  if (amount > coinBalance) {
-    withdrawStatusEl.textContent = 'Amount exceeds your balance.';
-    return;
-  }
-  if (!selectedPaymentMethod) {
-    withdrawStatusEl.textContent = 'Please choose KPay or Wave.';
-    return;
-  }
-  if (!phoneInput.value.trim()) {
-    withdrawStatusEl.textContent = 'Please enter your phone number.';
-    return;
-  }
-
-  coinBalance -= amount;
-  try {
-    localStorage.setItem('birdGameCoinBalance', coinBalance);
-  } catch (e) {}
-  updateCoinDisplays();
-
-  withdrawStatusEl.style.color = '#2c8c50';
-  withdrawStatusEl.textContent = 'Withdrawal of ' + amount + ' 🪙 via ' + selectedPaymentMethod +
-    ' to ' + phoneInput.value.trim() + ' submitted!';
-  amountInput.value = '';
-  phoneInput.value = '';
-  selectedPaymentMethod = null;
-  document.querySelectorAll('.payBtn').forEach(b => b.classList.remove('selected'));
-});
-
-function makeScenery() {
-  clouds = [];
-  for (let i = 0; i < 5; i++) {
-    clouds.push({
-      x: Math.random() * canvas.width,
-      y: 40 + Math.random() * (canvas.height * 0.4),
-      s: 0.6 + Math.random() * 0.8,
-      speed: 0.2 + Math.random() * 0.3
-    });
-  }
-  hills = [];
-  for (let i = 0; i < 6; i++) {
-    hills.push({
-      x: i * 160,
-      h: 40 + Math.random() * 50
-    });
-  }
 }
 
-function reset() {
-  bird = {
-    x: canvas.width * 0.3,
-    y: canvas.height / 2,
-    r: 16,
-    vy: 0
-  };
-  pipes = [];
-  coins = [];
-  score = 0;
-  runCoins = 0;
-  gravity = 0.16;        // slower falling
-  flapPower = -5.2;
-  pipeSpeed = 1.15;      // slower start speed
-  pipeInterval = 165;    // more space between pipes
-  pipeTimer = 60;        // spawn the first pipe soon after start
-  frame = 0;
-  gameState = 'ready'; // ready, playing, over
-  scoreEl.textContent = score;
-  makeScenery();
-  messageEl.textContent = '';
-  playBtn.textContent = 'PLAY';
-  homeBtn.style.display = 'none';
-  updateCoinDisplays();
-  overlayEl.style.display = 'flex';
-  uiEl.style.display = 'none';
-}
+/* Save state whenever the user leaves/hides the page, so mining keeps counting */
+window.addEventListener('beforeunload', saveState);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveState(); });
 
-function startGame() {
-  gameState = 'playing';
-  overlayEl.style.display = 'none';
-  uiEl.style.display = 'block';
-}
-
-function flap() {
-  if (gameState === 'playing') {
-    bird.vy = flapPower;
-  }
-}
-
-playBtn.addEventListener('click', function(e) {
-  e.stopPropagation();
-  if (gameState === 'ready' || gameState === 'over') {
-    playBtn.disabled = true;
-    playWithAd(() => {
-      playBtn.disabled = false;
-      reset();
-      startGame();
-    });
-  }
-});
-
-homeBtn.addEventListener('click', function(e) {
-  e.stopPropagation();
-  if (gameState === 'over') {
-    reset(); // go back to the home / start screen without starting a new run
-  }
-});
-
-canvas.addEventListener('mousedown', flap);
-canvas.addEventListener('touchstart', function(e) {
-  e.preventDefault();
-  flap();
-}, { passive: false });
-window.addEventListener('keydown', function(e) {
-  if (e.code === 'Space') {
-    e.preventDefault();
-    if (gameState === 'playing') flap();
-    else if (gameState === 'ready' || gameState === 'over') {
-      reset();
-      startGame();
-    }
-  }
-});
-
-const pipeWidth = 64;
-const pipeGap = 235;
-
-function spawnPipe() {
-  const minTop = 50;
-  const maxTop = canvas.height - pipeGap - 120;
-  const topH = Math.random() * (maxTop - minTop) + minTop;
-  pipes.push({
-    x: canvas.width,
-    top: topH,
-    bottom: topH + pipeGap,
-    passed: false
-  });
-
-  // Every pipe gets a coin floating in the gap between them
-  coins.push({
-    x: canvas.width + pipeWidth / 2,
-    y: topH + pipeGap / 2 + (Math.random() * 40 - 20),
-    r: 11,
-    collected: false
-  });
-}
-
-function update() {
-  if (gameState !== 'playing') {
-    clouds.forEach(c => {
-      c.x -= c.speed;
-      if (c.x < -60) c.x = canvas.width + 60;
-    });
-    return;
-  }
-
-  bird.vy += gravity;
-  bird.y += bird.vy;
-
-  frame++;
-
-  // Keeps getting harder the longer you play, no limit
-  pipeSpeed = 1.3 + score * 0.035;
-  pipeInterval = Math.max(160 - score * 0.9, 85);
-
-  pipeTimer--;
-  if (pipeTimer <= 0) {
-    spawnPipe();
-    pipeTimer = pipeInterval;
-  }
-
-  clouds.forEach(c => {
-    c.x -= c.speed;
-    if (c.x < -60) c.x = canvas.width + 60;
-  });
-
-  for (let i = pipes.length - 1; i >= 0; i--) {
-    const p = pipes[i];
-    p.x -= pipeSpeed;
-
-    if (!p.passed && p.x + pipeWidth < bird.x) {
-      p.passed = true;
-      score++;
-      scoreEl.textContent = score;
-    }
-
-    if (p.x + pipeWidth < 0) {
-      pipes.splice(i, 1);
-    }
-
-    // collision
-    if (
-      bird.x + bird.r > p.x &&
-      bird.x - bird.r < p.x + pipeWidth &&
-      (bird.y - bird.r < p.top || bird.y + bird.r > p.bottom)
-    ) {
-      endGame();
-    }
-  }
-
-  // move & collect coins
-  for (let i = coins.length - 1; i >= 0; i--) {
-    const c = coins[i];
-    c.x -= pipeSpeed;
-
-    if (c.x < -20) {
-      coins.splice(i, 1);
-      continue;
-    }
-
-    const dx = bird.x - c.x;
-    const dy = bird.y - c.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < bird.r + c.r) {
-      coins.splice(i, 1);
-      runCoins++;
-      addCoins(1);
-    }
-  }
-
-  if (bird.y + bird.r > canvas.height - 40 || bird.y - bird.r < 0) {
-    endGame();
-  }
-}
-
-function endGame() {
-  if (gameState !== 'playing') return;
-  gameState = 'over';
-  if (score > best) {
-    best = score;
-    saveBest();
-  }
-  messageEl.textContent = 'Game Over!\nScore: ' + score + '  (Best: ' + best + ')\nCoins collected: ' + runCoins + ' 🪙';
-  playBtn.textContent = 'PLAY AGAIN';
-  homeBtn.style.display = 'block';
-  overlayEl.style.display = 'flex';
-  uiEl.style.display = 'none';
-}
-
-function drawBackground() {
-  // sky gradient
-  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  sky.addColorStop(0, '#7fd7f0');
-  sky.addColorStop(0.6, '#bdeaf5');
-  sky.addColorStop(1, '#eafaf0');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // sun
-  ctx.fillStyle = 'rgba(255, 244, 180, 0.9)';
-  ctx.beginPath();
-  ctx.arc(canvas.width - 60, 70, 34, 0, Math.PI * 2);
-  ctx.fill();
-
-  // clouds
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  clouds.forEach(c => {
-    ctx.save();
-    ctx.translate(c.x, c.y);
-    ctx.scale(c.s, c.s);
-    ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
-    ctx.arc(18, -8, 14, 0, Math.PI * 2);
-    ctx.arc(-16, -6, 12, 0, Math.PI * 2);
-    ctx.arc(6, 6, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  });
-
-  // distant hills
-  ctx.fillStyle = '#9cd7a0';
-  ctx.beginPath();
-  ctx.moveTo(0, canvas.height - 40);
-  hills.forEach(h => {
-    ctx.lineTo(h.x + 80, canvas.height - 40 - h.h);
-  });
-  ctx.lineTo(canvas.width, canvas.height - 40);
-  ctx.closePath();
-  ctx.fill();
-
-  // ground
-  ctx.fillStyle = '#ded895';
-  ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
-  ctx.fillStyle = '#8bc34a';
-  ctx.fillRect(0, canvas.height - 44, canvas.width, 6);
-}
-
-function drawBird() {
-  ctx.save();
-  ctx.translate(bird.x, bird.y);
-  const angle = Math.max(-0.5, Math.min(0.9, bird.vy / 12));
-  ctx.rotate(angle);
-
-  const r = bird.r;
-  const wingFlap = Math.sin(frame * 0.35);
-
-  // little tail feathers, behind the body
-  ctx.fillStyle = '#e85d04';
-  ctx.beginPath();
-  ctx.moveTo(-r * 0.75, -r * 0.35);
-  ctx.lineTo(-r * 1.5, -r * 0.55 + wingFlap * 2);
-  ctx.lineTo(-r * 1.45, r * 0.05);
-  ctx.lineTo(-r * 0.7, r * 0.25);
-  ctx.closePath();
-  ctx.fill();
-
-  // body with a soft gradient (light top, warm gold bottom)
-  const bodyGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.4, r * 0.2, 0, 0, r * 1.3);
-  bodyGrad.addColorStop(0, '#ffe27a');
-  bodyGrad.addColorStop(0.55, '#ffc93c');
-  bodyGrad.addColorStop(1, '#f4a127');
-  ctx.fillStyle = bodyGrad;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r, r * 0.82, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(122, 74, 0, 0.35)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // cream-colored belly patch
-  ctx.fillStyle = '#fff6dd';
-  ctx.beginPath();
-  ctx.ellipse(r * 0.15, r * 0.35, r * 0.55, r * 0.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // wing, flapping smoothly
-  ctx.save();
-  ctx.translate(-r * 0.15, r * 0.05);
-  ctx.rotate(wingFlap * 0.5);
-  const wingGrad = ctx.createLinearGradient(0, -r * 0.4, 0, r * 0.4);
-  wingGrad.addColorStop(0, '#ff9f45');
-  wingGrad.addColorStop(1, '#e85d04');
-  ctx.fillStyle = wingGrad;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 0.62, r * 0.38, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(122, 40, 0, 0.3)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.restore();
-
-  // rosy cheek
-  ctx.fillStyle = 'rgba(255, 120, 120, 0.35)';
-  ctx.beginPath();
-  ctx.ellipse(r * 0.05, r * 0.1, r * 0.22, r * 0.16, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // eye (white + shiny highlight + black pupil)
-  ctx.fillStyle = 'white';
-  ctx.beginPath();
-  ctx.arc(r * 0.4, -r * 0.28, r * 0.28, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#2b2b2b';
-  ctx.beginPath();
-  ctx.arc(r * 0.48, -r * 0.28, r * 0.15, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = 'white';
-  ctx.beginPath();
-  ctx.arc(r * 0.53, -r * 0.34, r * 0.05, 0, Math.PI * 2);
-  ctx.fill();
-
-  // beak, two-tone with a smile line
-  ctx.fillStyle = '#ff9505';
-  ctx.beginPath();
-  ctx.moveTo(r - 2, -r * 0.15);
-  ctx.lineTo(r + r * 0.75, r * 0.03);
-  ctx.lineTo(r - 2, r * 0.3);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = '#c96700';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(r - 4, r * 0.02);
-  ctx.lineTo(r + r * 0.55, r * 0.05);
-  ctx.strokeStyle = 'rgba(150, 80, 0, 0.4)';
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function drawPipes() {
-  pipes.forEach(p => {
-    ctx.fillStyle = '#4caf50';
-    ctx.fillRect(p.x, 0, pipeWidth, p.top);
-    ctx.fillRect(p.x, p.bottom, pipeWidth, canvas.height - 40 - p.bottom);
-
-    ctx.fillStyle = '#388e3c';
-    ctx.fillRect(p.x - 3, p.top - 20, pipeWidth + 6, 20);
-    ctx.fillRect(p.x - 3, p.bottom, pipeWidth + 6, 20);
-  });
-}
-
-function drawCoins() {
-  coins.forEach(c => {
-    ctx.save();
-    ctx.translate(c.x, c.y);
-    const wobble = Math.sin(frame * 0.15 + c.x * 0.05) * 0.15;
-    ctx.scale(1 + wobble, 1);
-
-    ctx.fillStyle = '#ffd700';
-    ctx.beginPath();
-    ctx.arc(0, 0, c.r, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#e0a800';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#fff3c4';
-    ctx.font = 'bold ' + (c.r * 1.1) + 'px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('$', 0, 1);
-
-    ctx.restore();
-  });
-}
-
-function draw() {
-  drawBackground();
-  drawPipes();
-  drawCoins();
-  drawBird();
-}
-
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-reset();
-loop();
-
+/* ---------- BOOT ---------- */
+loadState();
+runLoadingScreen(initGame);
 </script>
-</body>
+
+</body>  
 </html>
